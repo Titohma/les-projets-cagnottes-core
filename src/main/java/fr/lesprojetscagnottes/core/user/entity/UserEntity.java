@@ -6,7 +6,6 @@ import fr.lesprojetscagnottes.core.authentication.AuthenticationResponseEntity;
 import fr.lesprojetscagnottes.core.authorization.entity.AuthorityEntity;
 import fr.lesprojetscagnottes.core.authorization.entity.OrganizationAuthorityEntity;
 import fr.lesprojetscagnottes.core.budget.entity.BudgetEntity;
-import fr.lesprojetscagnottes.core.idea.entity.IdeaEntity;
 import fr.lesprojetscagnottes.core.news.entity.NewsEntity;
 import fr.lesprojetscagnottes.core.organization.entity.OrganizationEntity;
 import fr.lesprojetscagnottes.core.project.entity.ProjectEntity;

@@ -28,6 +28,9 @@ public class ProjectModel extends AuditEntity<String> {
     @Enumerated(EnumType.STRING)
     protected ProjectStatus status = ProjectStatus.DRAFT;
 
+    @Column(name = "published")
+    protected Boolean isPublished = false;
+
     @Column(name = "idea_has_anonymous_creator")
     protected Boolean ideaHasAnonymousCreator = false;
 
@@ -73,6 +76,9 @@ public class ProjectModel extends AuditEntity<String> {
         model.setId(entity.getId());
         model.setTitle(entity.getTitle());
         model.setStatus(entity.getStatus());
+        model.setIsPublished(entity.getIsPublished());
+        model.setIdeaHasAnonymousCreator(entity.getIdeaHasAnonymousCreator());
+        model.setIdeaHasLeaderCreator(entity.getIdeaHasLeaderCreator());
         model.setLastStatusUpdate(entity.getLastStatusUpdate());
         model.setShortDescription(entity.getShortDescription());
         model.setLongDescription(entity.getLongDescription());

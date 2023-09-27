@@ -133,7 +133,7 @@ values
 --- PROJECTS
 
 insert into public.projects
-(id,created_at,created_by,updated_at,updated_by,people_required,short_description,status,title,leader_id,workspace,organization_id,long_description)
+(id,created_at,created_by,updated_at,updated_by,people_required,short_description,status,title,leader_id,workspace,organization_id,long_description,published)
 values
 (nextval('projects_seq'), now() - interval '2 months', 'DenisGiroux@dayrep.com', now() - interval '2 months', 'DenisGiroux@dayrep.com',
 2, 'Pour la salle de pause', 'FINISHED', 'Du nouveau mobilier', (select id from users where username = 'DenisGiroux@dayrep.com'),
@@ -142,7 +142,7 @@ uuid_generate_v4(),(select id from organizations where name = 'Super Boite'),
 <h2 id="de-quoi-s-agit-il-">De quoi s&#39;agit-il ?</h2>
 <h2 id="qui-est-concern-">Qui est concerné ?</h2>
 <h2 id="a-quoi-va-servir-le-budget-">A quoi va servir le budget ?</h2>
-<h2 id="pourquoi-a-me-tient-coeur">Pourquoi ça me tient à coeur</h2>'),
+<h2 id="pourquoi-a-me-tient-coeur">Pourquoi ça me tient à coeur</h2>', true),
 (nextval('projects_seq'), now() - interval '1 month', 'CharlottePaquette@rhyta.com', now() - interval '1 month', 'CharlottePaquette@rhyta.com',
 4, 'Notre boite est la meilleure', 'FINISHED', 'Un feu d''artifice pour le séminaire annuel', (select id from users where username = 'CharlottePaquette@rhyta.com'),
 uuid_generate_v4(),(select id from organizations where name = 'Super Boite'),
@@ -150,7 +150,7 @@ uuid_generate_v4(),(select id from organizations where name = 'Super Boite'),
 <h2 id="de-quoi-s-agit-il-">De quoi s&#39;&#39;agit-il ?</h2>
 <h2 id="qui-est-concern-">Qui est concerné ?</h2>
 <h2 id="a-quoi-va-servir-le-budget-">A quoi va servir le budget ?</h2>
-<h2 id="pourquoi-a-me-tient-coeur">Pourquoi ça me tient à coeur</h2>'),
+<h2 id="pourquoi-a-me-tient-coeur">Pourquoi ça me tient à coeur</h2>', true),
 (nextval('projects_seq'), now() - interval '6 days', 'MatildaCaisse@dayrep.com', now() - interval '6 days', 'MatildaCaisse@dayrep.com',
 2, 'Avec ça, nos concurrents n''ont qu''à bien se tenir','IN_PROGRESS','Le projet ABCD', (select id from users where username = 'MatildaCaisse@dayrep.com'),
 uuid_generate_v4(),(select id from organizations where name = 'Super Boite'),
@@ -158,7 +158,7 @@ uuid_generate_v4(),(select id from organizations where name = 'Super Boite'),
 <h2 id="de-quoi-s-agit-il-">De quoi s&#39;&#39;agit-il ?</h2>
 <h2 id="qui-est-concern-">Qui est concerné ?</h2>
 <h2 id="a-quoi-va-servir-le-budget-">A quoi va servir le budget ?</h2>
-<h2 id="pourquoi-c-est-important">Pourquoi c&#39;&#39;est important</h2>');
+<h2 id="pourquoi-c-est-important">Pourquoi c&#39;&#39;est important</h2>', true);
 
 --- PROJECTS MEMBERS
 
@@ -208,8 +208,8 @@ UPDATE public.donations
 --- IDEAS
 
 INSERT INTO public.projects
-(id, created_at, created_by, updated_at, updated_by, long_description, people_required, short_description, status, title, leader_id, workspace, organization_id, last_status_update, idea_has_anonymous_creator, idea_has_leader_creator)
+(id, created_at, created_by, updated_at, updated_by, long_description, people_required, short_description, status, title, leader_id, workspace, organization_id, last_status_update, idea_has_anonymous_creator, idea_has_leader_creator, published)
 values
-(nextval('ideas_seq'), now(), 'CharlottePaquette@rhyta.com', now(), 'CharlottePaquette@rhyta.com', 'Ca va être génial !<br>', NULL, 'Clean walk du quartier', 'IDEA', 'Clean walk du quartier', (select id from users where username = 'CharlottePaquette@rhyta.com'), NULL, (select id from organizations where name = 'Super Boite'), now(), false, false),
-(nextval('ideas_seq'), now(), 'anonymous', now(), 'anonymous', 'C''est galère de poser des congés.<br>', NULL, 'Optimiser le logiciel de pose des congés', 'IDEA', 'Optimiser le logiciel de pose des congés', NULL, NULL, (select id from organizations where name = 'Super Boite'), now(), true, false),
-(nextval('ideas_seq'), now(), 'DenisGiroux@dayrep.com', now(), 'DenisGiroux@dayrep.com', 'Qui n''aime pas les fruits ?<br>', NULL, 'Des fruits frais en salle de pause', 'IDEA', 'Des fruits frais en salle de pause', (select id from users where username = 'DenisGiroux@dayrep.com'), NULL, (select id from organizations where name = 'Super Boite'), now(), false, true);
+(nextval('projects_seq'), now(), 'CharlottePaquette@rhyta.com', now(), 'CharlottePaquette@rhyta.com', 'Ca va être génial !<br>', NULL, 'Clean walk du quartier', 'IDEA', 'Clean walk du quartier', (select id from users where username = 'CharlottePaquette@rhyta.com'), NULL, (select id from organizations where name = 'Super Boite'), now(), false, false, true),
+(nextval('projects_seq'), now(), 'anonymous', now(), 'anonymous', 'C''est galère de poser des congés.<br>', NULL, 'Optimiser le logiciel de pose des congés', 'IDEA', 'Optimiser le logiciel de pose des congés', NULL, NULL, (select id from organizations where name = 'Super Boite'), now(), true, false, true),
+(nextval('projects_seq'), now(), 'DenisGiroux@dayrep.com', now(), 'DenisGiroux@dayrep.com', 'Qui n''aime pas les fruits ?<br>', NULL, 'Des fruits frais en salle de pause', 'IDEA', 'Des fruits frais en salle de pause', (select id from users where username = 'DenisGiroux@dayrep.com'), NULL, (select id from organizations where name = 'Super Boite'), now(), false, true, true);

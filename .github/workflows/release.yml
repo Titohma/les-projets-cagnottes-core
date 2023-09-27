@@ -12,12 +12,12 @@ jobs:
     outputs:
       version: ${{ steps.get_version.outputs.VERSION }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up JDK
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v3
       with:
-        distribution: 'adopt'
-        java-version: '19'
+        distribution: 'temurin'
+        java-version: '21'
     - name: Get the version
       id: get_version
       run: echo ::set-output name=VERSION::$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
@@ -33,12 +33,12 @@ jobs:
     needs: verify-version
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up JDK
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v3
       with:
-        distribution: 'adopt'
-        java-version: '19'
+        distribution: 'temurin'
+        java-version: '21'
     - name: Build with Maven
       run: ./mvnw -B clean spring-boot:build-image --file pom.xml
       
@@ -46,12 +46,12 @@ jobs:
     needs: [verify-version, build]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up JDK
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v3
       with:
-        distribution: 'adopt'
-        java-version: '19'
+        distribution: 'temurin'
+        java-version: '21'
     - name: Test with Maven
       id: tests_run
       run: echo ::set-output name=EXIT_CODE::$(./mvnw -B clean test --file pom.xml > test.log ; echo $?)
@@ -61,7 +61,7 @@ jobs:
     - name: Generate Cluecumber report
       run: ./mvnw -B cluecumber-report:reporting --file pom-cluecumber.xml
     - name: Checkout private tools
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: les-projets-cagnottes/les-projets-cagnottes.github.io
         token: ${{ secrets.PUSH_CUCUMBER_REPORTS_GITHUB_TOKEN }}
@@ -88,7 +88,7 @@ jobs:
     needs: [verify-version, build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Config Git
         run: git config user.email "${{ secrets.GIT_CONFIG_EMAIL }}" && git config user.name "${{ secrets.GIT_CONFIG_NAME }}"
       - run: git tag ${{ needs.verify-version.outputs.version }}
@@ -107,14 +107,14 @@ jobs:
     needs: [verify-version, release]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         ref: '${{ needs.verify-version.outputs.version }}'
     - name: Set up JDK
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v3
       with:
-        distribution: 'adopt'
-        java-version: '19'
+        distribution: 'temurin'
+        java-version: '21'
     - name: Build with Maven
       run: ./mvnw -B clean spring-boot:build-image --file pom.xml
     - name: Get the version

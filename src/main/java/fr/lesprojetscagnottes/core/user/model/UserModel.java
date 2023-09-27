@@ -71,12 +71,6 @@ public class UserModel extends AuditEntity<String> {
     private Set<Long> donationsRef = new LinkedHashSet<>();
 
     @Transient
-    private Set<Long> ideasRef = new LinkedHashSet<>();
-
-    @Transient
-    private Set<Long> followedIdeasRef = new LinkedHashSet<>();
-
-    @Transient
     private  Set<Long> slackUsersRef = new LinkedHashSet<>();
 
     @Transient

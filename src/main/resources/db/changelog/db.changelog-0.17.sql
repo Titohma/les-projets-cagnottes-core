@@ -3,8 +3,9 @@
 --changeset lesprojetscagnottes:merge-ideas-projects
 ALTER TABLE projects
     ADD idea_has_anonymous_creator boolean,
-    ADD idea_has_leader_creator boolean;
---rollback alter table projects drop column idea_has_anonymous_creator,drop column idea_has_leader_creator;
+    ADD idea_has_leader_creator boolean,
+    ADD published boolean;
+--rollback alter table projects drop column idea_has_anonymous_creator,drop column idea_has_leader_creator, drop column published;
 
 --changeset lesprojetscagnottes:migrate-idea-projects
 insert into projects(
@@ -22,7 +23,8 @@ insert into projects(
 	organization_id,
 	last_status_update,
 	idea_has_anonymous_creator,
-	idea_has_leader_creator
+	idea_has_leader_creator,
+	published
 	)
 (
 	select nextval('projects_seq'),
@@ -39,7 +41,8 @@ insert into projects(
 	organization_id,
 	updated_at as "last_status_update",
 	has_anonymous_creator as "idea_has_anonymous_creator",
-	has_leader_creator as "idea_has_leader_creator"
+	has_leader_creator as "idea_has_leader_creator",
+	TRUE
 	from ideas
 );
 
