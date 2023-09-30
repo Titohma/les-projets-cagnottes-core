@@ -5,11 +5,11 @@ import fr.lesprojetscagnottes.core.common.audit.AuditEntity;
 import fr.lesprojetscagnottes.core.common.strings.StringsCommon;
 import fr.lesprojetscagnottes.core.project.entity.ProjectEntity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
-import jakarta.validation.constraints.NotNull;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -87,7 +87,9 @@ public class ProjectModel extends AuditEntity<String> {
         model.setLeader(new GenericModel(entity.getLeader()));
         model.setOrganization(new GenericModel(entity.getOrganization()));
         entity.getCampaigns().forEach(campaign -> model.getCampaignsRef().add(campaign.getId()));
-        entity.getPeopleGivingTime().forEach(member -> model.getPeopleGivingTimeRef().add(member.getId()));
+        entity.getPeopleGivingTime().forEach(member -> {
+            if (member != null) model.getPeopleGivingTimeRef().add(member.getId());
+        });
         entity.getNews().forEach(news -> model.getNewsRef().add(news.getId()));
         return model;
     }

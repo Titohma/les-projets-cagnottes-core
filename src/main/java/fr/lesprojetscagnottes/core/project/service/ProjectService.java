@@ -29,17 +29,25 @@ public class ProjectService {
     @Value("${fr.lesprojetscagnottes.web.url}")
     private String webUrl;
 
-    @Autowired
-    private NotificationService notificationService;
+    private final NotificationService notificationService;
+
+    private final OrganizationService organizationService;
+
+    private final UserService userService;
+
+    private final ProjectRepository projectRepository;
 
     @Autowired
-    private OrganizationService organizationService;
-
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private ProjectRepository projectRepository;
+    public ProjectService(
+            NotificationService notificationService,
+            OrganizationService organizationService,
+            UserService userService,
+            ProjectRepository projectRepository) {
+        this.notificationService = notificationService;
+        this.organizationService = organizationService;
+        this.userService = userService;
+        this.projectRepository = projectRepository;
+    }
 
     public ProjectEntity findById(Long id) {
         return projectRepository.findById(id).orElse(null);
@@ -48,21 +56,21 @@ public class ProjectService {
     public ProjectModel findById(Principal principal, Long id) {
 
         // Verify that ID is correct
-        if(id <= 0) {
+        if (id <= 0) {
             log.error("Impossible to get project by ID : ID is incorrect");
             throw new BadRequestException();
         }
 
         // Verify that entity exists
         ProjectEntity entity = findById(id);
-        if(entity == null) {
+        if (entity == null) {
             log.error("Impossible to get project by ID : project not found");
             throw new NotFoundException();
         }
 
         // Verify that principal is in project organizations
         Long userLoggedInId = userService.get(principal).getId();
-        if(userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, entity.getOrganization().getId())) {
+        if (userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, entity.getOrganization().getId())) {
             log.error("Impossible to get project by ID : principal has not enough privileges");
             throw new ForbiddenException();
         }
@@ -78,18 +86,18 @@ public class ProjectService {
         Set<OrganizationEntity> userLoggedInOrganizations = organizationService.findAllByMembers_Id(userLoggedInId);
         Set<ProjectModel> models = new LinkedHashSet<>();
 
-        for(Long id : ids) {
+        for (Long id : ids) {
 
             // Retrieve full referenced objects
             ProjectEntity project = projectRepository.findById(id).orElse(null);
-            if(project == null) {
+            if (project == null) {
                 log.error("Impossible to get project {} : it doesn't exist", id);
                 continue;
             }
 
             // Verify that principal share an organization with the user
             Set<OrganizationEntity> projectOrganizations = organizationService.findAllByProjects_Id(id);
-            if(userService.hasNoACommonOrganization(userLoggedInOrganizations, projectOrganizations) && userLoggedIn_isNotAdmin) {
+            if (userService.hasNoACommonOrganization(userLoggedInOrganizations, projectOrganizations) && userLoggedIn_isNotAdmin) {
                 log.error("Impossible to get project {} : principal {} is not in its organizations", id, userLoggedInId);
                 continue;
             }
@@ -104,21 +112,21 @@ public class ProjectService {
     public Set<UserModel> listTeammates(Principal principal, Long id) {
 
         // Verify that IDs are corrects
-        if(id <= 0) {
+        if (id <= 0) {
             log.error("Impossible to get teammates : parameters are incorrect");
             throw new BadRequestException();
         }
 
         // Verify that organization exists
         ProjectEntity project = projectRepository.findById(id).orElse(null);
-        if(project == null) {
+        if (project == null) {
             log.error("Impossible to get teammates : project not found");
             throw new NotFoundException();
         }
 
         // Verify if principal has correct privileges
         Long userLoggedInId = userService.get(principal).getId();
-        if(userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, project.getOrganization().getId())) {
+        if (userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, project.getOrganization().getId())) {
             log.error("Impossible to get teammates : principal is not a member of any of the project organizations");
             throw new ForbiddenException();
         }
@@ -136,34 +144,64 @@ public class ProjectService {
         UserEntity leader = userService.findById(projectModel.getLeader().getId());
         OrganizationEntity organization = organizationService.findById(projectModel.getOrganization().getId());
 
-        // Fails if any of references are null
-        if(leader == null || organization == null) {
-            log.error("Impossible to create project \"{}\" : one or more reference(s) doesn't exist", projectModel.getTitle());
+        // Fails if organization reference is null
+        if (organization == null) {
+            log.error("Impossible to save project \"{}\" : organization doesn't exist", projectModel.getTitle());
             throw new NotFoundException();
         }
 
         // Verify that principal is member of organizations
         Long userLoggedInId = userService.get(principal).getId();
-        if(userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, organization.getId())) {
-            log.error("Impossible to create project \"{}\" : principal {} is not member of organization", projectModel.getTitle(), userLoggedInId);
+        if (userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, organization.getId())) {
+            log.error("Impossible to save project \"{}\" : principal {} is not member of organization", projectModel.getTitle(), userLoggedInId);
             throw new ForbiddenException();
         }
 
-        // Verify that principal is the leader of the project (in update mode)
-        if(projectModel.getId() > 0 && !leader.getId().equals(userLoggedInId) && userService.isNotAdmin(userLoggedInId)) {
-            log.error("Impossible to update project {} : principal {} is not its leader", userLoggedInId, projectModel.getId());
+        // If project is in the idea status
+        if (projectModel.getStatus() != ProjectStatus.IDEA) {
+
+            // Fails if leader reference is null
+            if (leader == null) {
+                log.error("Impossible to save project \"{}\" : leader doesn't exist", projectModel.getTitle());
+                throw new NotFoundException();
+            }
+
+            // Verify that principal is the leader of the project (in update mode)
+            if (projectModel.getId() > 0
+                    && !leader.getId().equals(userLoggedInId)
+                    && userService.isNotAdmin(userLoggedInId)
+                    || (projectModel.getStatus() == ProjectStatus.IDEA && projectModel.getIdeaHasLeaderCreator() && !leader.getId().equals(userLoggedInId))
+            ) {
+                log.error("Impossible to update project {} : principal {} is not its leader", projectModel.getTitle(), projectModel.getId());
+                throw new ForbiddenException();
+            }
+        } else {
+
+            // Verify that principal is the leader of the project (in update mode)
+            if (leader == null && projectModel.getIdeaHasLeaderCreator()) {
+                log.error("Impossible to update project {} : leader must be defined", projectModel.getTitle());
+                throw new ForbiddenException();
+            }
+
+            // Verify that principal is the leader of the project (in update mode)
+            if (leader != null && projectModel.getIdeaHasLeaderCreator() && !leader.getId().equals(userLoggedInId) && userService.isNotAdmin(userLoggedInId)) {
+                log.error("Impossible to update project {} : principal {} is not its leader", projectModel.getTitle(), userLoggedInId);
+                throw new ForbiddenException();
+            }
+
         }
+
 
         // Get existing project
         ProjectEntity projectToSave = null;
-        if(projectModel.getId() > 0) {
+        if (projectModel.getId() > 0) {
             projectToSave = findById(projectModel.getId());
-            if(projectToSave == null) {
+            if (projectToSave == null) {
                 log.error("Impossible to update project {} : cannot find any project in DB", projectModel.getId());
                 throw new NotFoundException();
             }
         }
-        if(projectToSave == null) {
+        if (projectToSave == null) {
             projectToSave = new ProjectEntity();
         }
 
@@ -171,7 +209,10 @@ public class ProjectService {
         projectToSave.setTitle(projectModel.getTitle());
         projectToSave.setShortDescription(projectModel.getShortDescription());
         projectToSave.setLongDescription(projectModel.getLongDescription());
+        projectToSave.setIdeaHasAnonymousCreator(projectModel.getIdeaHasAnonymousCreator());
+        projectToSave.setIdeaHasLeaderCreator(projectModel.getIdeaHasLeaderCreator());
         projectToSave.setPeopleRequired(projectModel.getPeopleRequired());
+        projectToSave.setStatus(projectModel.getStatus());
         projectToSave.setWorkspace(projectModel.getWorkspace());
         projectToSave.setLeader(leader);
         projectToSave.setOrganization(organization);
@@ -183,9 +224,9 @@ public class ProjectService {
     public ProjectModel create(Principal principal, ProjectModel projectModel) {
 
         // Fails if any of references are null
-        if(projectModel == null || projectModel.getLeader() == null || projectModel.getLeader().getId() <= 0 ||
+        if (projectModel == null || projectModel.getLeader() == null || projectModel.getLeader().getId() <= 0 ||
                 projectModel.getOrganization() == null || projectModel.getOrganization().getId() <= 0) {
-            if(projectModel != null ) {
+            if (projectModel != null) {
                 log.error("Impossible to save project \"{}\" : some references are missing", projectModel.getTitle());
             } else {
                 log.error("Impossible to save a null project");
@@ -199,8 +240,8 @@ public class ProjectService {
     public ProjectModel update(Principal principal, ProjectModel projectModel) {
 
         // Fails if any of references are null
-        if(projectModel == null || projectModel.getId() <= 0 || projectModel.getLeader() == null || projectModel.getLeader().getId() < 0) {
-            if(projectModel != null ) {
+        if (projectModel == null || projectModel.getId() <= 0 || projectModel.getLeader() == null || projectModel.getLeader().getId() < 0) {
+            if (projectModel != null) {
                 log.error("Impossible to update project {} : some references are missing", projectModel.getId());
             } else {
                 log.error("Impossible to update a null project");
@@ -214,7 +255,7 @@ public class ProjectService {
     public void join(Principal principal, Long id) {
 
         // Fails if any of references are null
-        if(id < 0) {
+        if (id < 0) {
             log.error("Impossible to join project {} : some references are missing", id);
             throw new BadRequestException();
         }
@@ -223,7 +264,7 @@ public class ProjectService {
         ProjectEntity project = projectRepository.findById(id).orElse(null);
 
         // Fails if any of references are null
-        if(project == null) {
+        if (project == null) {
             log.error("Impossible to join project {} : one or more reference(s) doesn't exist", id);
             throw new NotFoundException();
         }
@@ -231,13 +272,13 @@ public class ProjectService {
         // Verify that principal is member of organizations
         UserEntity userLoggedIn = userService.get(principal);
         Long userLoggedInId = userLoggedIn.getId();
-        if(!userService.isMemberOfOrganization(userLoggedInId, project.getOrganization().getId())) {
+        if (!userService.isMemberOfOrganization(userLoggedInId, project.getOrganization().getId())) {
             log.error("Impossible to join project {} : principal {} is not member of organization", id, userLoggedInId);
             throw new ForbiddenException();
         }
 
         // Fails if project is finished
-        if(project.getStatus().equals(ProjectStatus.FINISHED)) {
+        if (project.getStatus().equals(ProjectStatus.FINISHED)) {
             log.error("Impossible to join project {} : status is finished", id);
         }
 
@@ -256,7 +297,7 @@ public class ProjectService {
     public void updateStatus(Principal principal, Long id, ProjectStatus status) {
 
         // Fails if any of references are null
-        if(id < 0) {
+        if (id < 0) {
             log.error("Impossible to update project status {} : some references are missing", id);
             throw new BadRequestException();
         }
@@ -265,7 +306,7 @@ public class ProjectService {
         ProjectEntity project = projectRepository.findById(id).orElse(null);
 
         // Fails if any of references are null
-        if(project == null) {
+        if (project == null) {
             log.error("Impossible to update project status {} : one or more reference(s) doesn't exist", id);
             throw new NotFoundException();
         }
@@ -273,7 +314,7 @@ public class ProjectService {
         // Verify that principal has enough privileges
         UserEntity userLoggedIn = userService.get(principal);
         Long userLoggedInId = userLoggedIn.getId();
-        if(userService.isNotAdmin(userLoggedInId)
+        if (userService.isNotAdmin(userLoggedInId)
                 && userService.isNotManagerOfOrganization(userLoggedInId, project.getOrganization().getId())
                 && !userLoggedInId.equals(project.getLeader().getId())) {
             log.error("Impossible to update project status {} : principal has not enough privileges", project.getId());
@@ -289,7 +330,7 @@ public class ProjectService {
         projectRepository.save(project);
 
         // Prepare & send notifications
-        if(previousStatus.equals(ProjectStatus.DRAFT)
+        if (previousStatus.equals(ProjectStatus.DRAFT)
                 && status.equals(ProjectStatus.IN_PROGRESS)) {
             Map<String, Object> model = new HashMap<>();
             model.put("user_fullname", userLoggedIn.getFullname());
