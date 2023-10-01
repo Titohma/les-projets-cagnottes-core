@@ -305,7 +305,7 @@ CREATE TABLE IF NOT EXISTS slack_notifications (
     notification_id bigint,
     team_id bigint
 );
---rollback drop table ms_notifications;
+--rollback drop table slack_notifications;
 
 --changeset lesprojetscagnottes:add-fk-slack_notification
 ALTER TABLE ONLY slack_notifications

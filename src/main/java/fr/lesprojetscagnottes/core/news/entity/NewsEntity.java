@@ -26,6 +26,6 @@ public class NewsEntity extends NewsModel {
     private OrganizationEntity organization = new OrganizationEntity();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private ProjectEntity project = new ProjectEntity();
+    private ProjectEntity project = null;
 
 }

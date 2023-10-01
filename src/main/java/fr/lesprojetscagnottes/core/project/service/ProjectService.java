@@ -138,6 +138,10 @@ public class ProjectService {
         return models;
     }
 
+    public ProjectEntity save(ProjectEntity projectEntity) {
+        return projectRepository.save(projectEntity);
+    }
+
     public ProjectModel save(Principal principal, ProjectModel projectModel) {
 
         // Retrieve full referenced objects
@@ -151,7 +155,8 @@ public class ProjectService {
         }
 
         // Verify that principal is member of organizations
-        Long userLoggedInId = userService.get(principal).getId();
+        UserEntity userLoggedIn = userService.get(principal);
+        Long userLoggedInId = userLoggedIn.getId();
         if (userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, organization.getId())) {
             log.error("Impossible to save project \"{}\" : principal {} is not member of organization", projectModel.getTitle(), userLoggedInId);
             throw new ForbiddenException();
@@ -205,6 +210,9 @@ public class ProjectService {
             projectToSave = new ProjectEntity();
         }
 
+        // Save previous status for notification purposes
+        ProjectStatus previousStatus = projectToSave.getStatus();
+
         // Save project
         projectToSave.setTitle(projectModel.getTitle());
         projectToSave.setShortDescription(projectModel.getShortDescription());
@@ -217,8 +225,33 @@ public class ProjectService {
         projectToSave.setLeader(leader);
         projectToSave.setOrganization(organization);
         projectToSave.getPeopleGivingTime().add(leader);
+        ProjectEntity projectSaved = this.save(projectToSave);
 
-        return ProjectModel.fromEntity(projectRepository.save(projectToSave));
+        // Prepare & send notifications for projects
+        if ((previousStatus.equals(ProjectStatus.DRAFT) || previousStatus.equals(ProjectStatus.IDEA))
+                && projectToSave.getStatus().equals(ProjectStatus.IN_PROGRESS)) {
+            Map<String, Object> model = new HashMap<>();
+            model.put("_user_email_", userLoggedIn.getEmail());
+            model.put("user_fullname", userLoggedIn.getFullname());
+            model.put("project_id", projectToSave.getId());
+            model.put("project_title", projectToSave.getTitle());
+            model.put("project_url", webUrl + "/projects/" + projectToSave.getId());
+            notificationService.create(NotificationName.PROJECT_PUBLISHED, model, projectToSave.getOrganization().getId());
+        }
+
+        // Prepare & send notifications for ideas
+        if (previousStatus.equals(ProjectStatus.DRAFT)
+                && projectToSave.getStatus().equals(ProjectStatus.IDEA)) {
+            Map<String, Object> model = new HashMap<>();
+            model.put("_user_email_", userLoggedIn.getEmail());
+            model.put("user_fullname", userLoggedIn.getFullname());
+            model.put("project_id", projectToSave.getId());
+            model.put("project_title", projectToSave.getTitle());
+            model.put("project_url", webUrl + "/projects/" + projectToSave.getId());
+            notificationService.create(NotificationName.IDEA_PUBLISHED, model, projectToSave.getOrganization().getId());
+        }
+
+        return ProjectModel.fromEntity(projectSaved);
     }
 
     public ProjectModel create(Principal principal, ProjectModel projectModel) {
@@ -321,22 +354,5 @@ public class ProjectService {
             throw new ForbiddenException();
         }
 
-        // Save previous status for notification purposes
-        ProjectStatus previousStatus = project.getStatus();
-
-        // Update status
-        project.setStatus(status);
-        project.setLastStatusUpdate(new Date());
-        projectRepository.save(project);
-
-        // Prepare & send notifications
-        if (previousStatus.equals(ProjectStatus.DRAFT)
-                && status.equals(ProjectStatus.IN_PROGRESS)) {
-            Map<String, Object> model = new HashMap<>();
-            model.put("user_fullname", userLoggedIn.getFullname());
-            model.put("project_title", project.getTitle());
-            model.put("project_url", webUrl + "/projects/" + project.getId());
-            notificationService.create(NotificationName.PROJECT_PUBLISHED, model, project.getOrganization().getId());
-        }
     }
 }

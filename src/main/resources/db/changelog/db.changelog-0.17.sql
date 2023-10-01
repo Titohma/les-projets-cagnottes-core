@@ -67,3 +67,32 @@ DROP TABLE ideas;
 --rollback 	 CONSTRAINT fk_organization FOREIGN KEY (organization_id) REFERENCES organizations(id),
 --rollback 	 CONSTRAINT fk_submitter FOREIGN KEY (submitter_id) REFERENCES users(id)
 --rollback );
+
+--changeset lesprojetscagnottes:create-sequence-news_notifications
+CREATE SEQUENCE IF NOT EXISTS news_notifications_seq
+    START WITH 1
+    INCREMENT BY 50
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+--rollback drop sequence news_notifications_seq;
+
+--changeset lesprojetscagnottes:create-table-news_notifications
+CREATE TABLE IF NOT EXISTS news_notifications (
+    id bigint primary key,
+    created_at timestamp without time zone DEFAULT now(),
+    created_by character varying(255) DEFAULT 'System'::character varying,
+    updated_at timestamp without time zone DEFAULT now(),
+    updated_by character varying(255) DEFAULT 'System'::character varying,
+    sent boolean,
+    notification_id bigint,
+    news_id bigint
+);
+--rollback drop table news_notifications;
+
+--changeset lesprojetscagnottes:add-fk-news_notifications
+ALTER TABLE ONLY news_notifications
+    ADD CONSTRAINT fk_notification FOREIGN KEY (notification_id) REFERENCES notifications(id),
+    ADD CONSTRAINT fk_news FOREIGN KEY (news_id) REFERENCES news(id);
+--rollback alter table news_notifications drop constraint fk_news;
+--rollback alter table news_notifications drop constraint fk_notification;
