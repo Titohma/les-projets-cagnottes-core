@@ -75,21 +75,21 @@ public class CampaignService {
 
     public CampaignModel findById(Principal principal, Long id) {
         // Verify that ID is correct
-        if(id <= 0) {
+        if (id <= 0) {
             log.error("Impossible to get campaign by ID : ID is incorrect");
             throw new BadRequestException();
         }
 
         // Verify that entity exists
         CampaignEntity entity = campaignRepository.findById(id).orElse(null);
-        if(entity == null) {
+        if (entity == null) {
             log.error("Impossible to get campaign by ID : campaign not found");
             throw new NotFoundException();
         }
 
         // Verify that principal is in campaign's project organization
         Long userLoggedInId = userService.get(principal).getId();
-        if(userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, entity.getProject().getOrganization().getId())) {
+        if (userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, entity.getProject().getOrganization().getId())) {
             log.error("Impossible to get campaign by ID : principal has not enough privileges");
             throw new ForbiddenException();
         }
@@ -103,17 +103,17 @@ public class CampaignService {
         boolean userLoggedIn_isNotAdmin = userService.isNotAdmin(userLoggedInId);
         List<CampaignModel> models = new ArrayList<>();
 
-        for(Long id : ids) {
+        for (Long id : ids) {
 
             // Retrieve full referenced objects
             CampaignEntity entity = campaignRepository.findById(id).orElse(null);
-            if(entity == null) {
+            if (entity == null) {
                 log.error("Impossible to get campaign {} : it doesn't exist", id);
                 continue;
             }
 
             // Verify that principal is in campaign's project organization
-            if(userLoggedIn_isNotAdmin && !userService.isMemberOfOrganization(userLoggedInId, entity.getProject().getOrganization().getId())) {
+            if (userLoggedIn_isNotAdmin && !userService.isMemberOfOrganization(userLoggedInId, entity.getProject().getOrganization().getId())) {
                 log.error("Impossible to get campaign {} : principal {} is not in organizations of project's campaign", id, userLoggedInId);
                 continue;
             }
@@ -170,7 +170,7 @@ public class CampaignService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime fundingDeadline = DateUtils.asLocalDateTime(campaign.getFundingDeadline());
         LocalDateTime nowPlus3Months = now.plusMonths(3);
-        if(fundingDeadline.isBefore(now) || fundingDeadline.isAfter(nowPlus3Months)) {
+        if (fundingDeadline.isBefore(now) || fundingDeadline.isAfter(nowPlus3Months)) {
             log.error("Impossible to create campaign : funding deadline is incorrect");
             throw new BadRequestException();
         }
@@ -186,6 +186,9 @@ public class CampaignService {
         CampaignEntity campaignToSave = new CampaignEntity();
         campaignToSave.setStatus(CampaignStatus.IN_PROGRESS);
         campaignToSave.setDonationsRequired(campaign.getDonationsRequired());
+        campaignToSave.setDaysRequired(campaign.getDaysRequired());
+        campaignToSave.setHoursRequired(campaign.getHoursRequired());
+        campaignToSave.setTotalRequired(campaign.getDonationsRequired() + budget.getCostOfDay() * campaign.getDaysRequired() + budget.getCostOfHour() * campaign.getHoursRequired());
         campaignToSave.setFundingDeadline(campaign.getFundingDeadline());
         campaignToSave.setTotalDonations(0f);
         campaignToSave.setProject(project);
@@ -213,10 +216,10 @@ public class CampaignService {
 
     public CampaignModel update(Principal principal, CampaignModel campaignModel) {
         // Fails if any of references are null
-        if(campaignModel == null
+        if (campaignModel == null
                 || campaignModel.getProject() == null || campaignModel.getProject().getId() <= 0
                 || campaignModel.getBudget() == null || campaignModel.getBudget().getId() <= 0) {
-            if(campaignModel != null ) {
+            if (campaignModel != null) {
                 log.error("Impossible to update campaign : some references are missing");
             } else {
                 log.error("Impossible to update a null campaign");
@@ -230,21 +233,21 @@ public class CampaignService {
         CampaignEntity campaign = campaignRepository.findById(campaignModel.getId()).orElse(null);
 
         // Fails if any of references are null
-        if(project == null || budget == null || campaign == null) {
+        if (project == null || budget == null || campaign == null) {
             log.error("Impossible to update campaign \"{}\" : one or more reference(s) doesn't exist", campaignModel.getId());
             throw new NotFoundException();
         }
 
         // Verify that principal is project leader
         Long userLoggedInId = userService.get(principal).getId();
-        if(!userLoggedInId.equals(project.getLeader().getId()) && userService.isNotAdmin(userLoggedInId)) {
+        if (!userLoggedInId.equals(project.getLeader().getId()) && userService.isNotAdmin(userLoggedInId)) {
             log.error("Impossible to update campaign \"{}\" : principal {} is not project leader", campaignModel.getId(), userLoggedInId);
             throw new ForbiddenException();
         }
 
         // Verify that budgets are usable
         Set<BudgetEntity> budgetsUsable = budgetService.findAllUsableBudgetsInOrganization(new Date(), project.getOrganization().getId());
-        if(!budgetsUsable.contains(budget)) {
+        if (!budgetsUsable.contains(budget)) {
             log.error("Impossible to update campaign : budgets are not all usable");
             throw new ForbiddenException();
         }
@@ -253,12 +256,22 @@ public class CampaignService {
         if (campaignModel.getDonationsRequired() > campaign.getDonationsRequired()) {
             campaign.setDonationsRequired(campaignModel.getDonationsRequired());
         }
+        if (budget.getCanFinanceTime()) {
+            if (campaignModel.getDaysRequired() > campaign.getDaysRequired()) {
+                campaign.setDaysRequired(campaignModel.getDaysRequired());
+            }
+            if (campaignModel.getHoursRequired() > campaign.getHoursRequired()) {
+                campaign.setHoursRequired(campaignModel.getHoursRequired());
+            }
+        }
+        campaign.setTotalRequired(campaign.getDonationsRequired() + budget.getCostOfDay() * campaign.getDaysRequired() + budget.getCostOfHour() * campaign.getHoursRequired());
+
         return CampaignModel.fromEntity(campaignRepository.save(campaign));
     }
 
     public DataPage<DonationModel> getDonations(Principal principal, long campaignId, int offset, int limit) {
         // Fails if campaign ID is missing
-        if(campaignId <= 0) {
+        if (campaignId <= 0) {
             log.error("Impossible to get donations by campaign ID : Campaign ID is incorrect");
             throw new BadRequestException();
         }
@@ -267,7 +280,7 @@ public class CampaignService {
         CampaignEntity campaign = campaignRepository.findById(campaignId).orElse(null);
 
         // Verify that any of references are not null
-        if(campaign == null) {
+        if (campaign == null) {
             log.error("Impossible to get donations by campaign ID : campaign {} not found", campaignId);
             throw new NotFoundException();
         }
@@ -275,7 +288,7 @@ public class CampaignService {
         // Verify that principal is in one organization of the campaign
         Long userLoggedInId = userService.get(principal).getId();
         Long organizationId = campaign.getProject().getOrganization().getId();
-        if(userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, organizationId)) {
+        if (userService.isNotAdmin(userLoggedInId) && !userService.isMemberOfOrganization(userLoggedInId, organizationId)) {
             log.error("Impossible to get donations by campaign ID : user {} is not member of organization {}", userLoggedInId, organizationId);
             throw new ForbiddenException();
         }
@@ -297,7 +310,7 @@ public class CampaignService {
 
     public void notifyCampaignStatus(long id) {
         CampaignEntity campaign = campaignRepository.findById(id).orElse(null);
-        if(campaign == null) {
+        if (campaign == null) {
             throw new NotFoundException();
         } else {
             long diffInMillies = Math.abs(campaign.getFundingDeadline().getTime() - new Date().getTime());

@@ -102,6 +102,9 @@ public class BudgetService {
         // Pass new values
         budgetToSave.setName(budgetModel.getName());
         budgetToSave.setAmountPerMember(budgetModel.getAmountPerMember());
+        budgetToSave.setCanFinanceTime(budgetModel.getCanFinanceTime());
+        budgetToSave.setCostOfDay(budgetModel.getCostOfDay());
+        budgetToSave.setCostOfHour(budgetModel.getCostOfHour());
         budgetToSave.setStartDate(budgetModel.getStartDate());
         budgetToSave.setEndDate(budgetModel.getEndDate());
         budgetToSave.setIsDistributed(budgetModel.getIsDistributed());

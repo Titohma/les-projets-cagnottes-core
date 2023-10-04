@@ -26,7 +26,7 @@ public class ProjectModel extends AuditEntity<String> {
     @Column(length = 50)
     @NotNull
     @Enumerated(EnumType.STRING)
-    protected ProjectStatus status = ProjectStatus.DRAFT;
+    protected ProjectStatus status = ProjectStatus.NEW;
 
     @Column(name = "published")
     protected Boolean isPublished = false;

@@ -26,6 +26,16 @@ public class BudgetModel extends AuditEntity<String> {
     @NotNull
     protected float amountPerMember = 0f;
 
+    @Column(name = "cost_of_hour")
+    protected float costOfHour = 0f;
+
+    @Column(name = "cost_of_day")
+    protected float costOfDay = 0f;
+
+    @Column(name = "can_finance_time")
+    @NotNull
+    protected Boolean canFinanceTime = false;
+
     @Column(name = "is_distributed")
     @NotNull
     protected Boolean isDistributed = false;
@@ -60,6 +70,9 @@ public class BudgetModel extends AuditEntity<String> {
         model.setId(entity.getId());
         model.setName(entity.getName());
         model.setAmountPerMember(entity.getAmountPerMember());
+        model.setCanFinanceTime(entity.getCanFinanceTime());
+        model.setCostOfDay(entity.getCostOfDay());
+        model.setCostOfHour(entity.getCostOfHour());
         model.setIsDistributed(entity.getIsDistributed());
         model.setStartDate(entity.getStartDate());
         model.setEndDate(entity.getEndDate());
@@ -70,18 +83,4 @@ public class BudgetModel extends AuditEntity<String> {
         return model;
     }
 
-    @Override
-    public String toString() {
-        return "BudgetModel{" +
-                "name='" + name + '\'' +
-                ", amountPerMember=" + amountPerMember +
-                ", isDistributed=" + isDistributed +
-                ", startDate=" + startDate +
-                ", endDate=" + endDate +
-                ", totalDonations=" + totalDonations +
-                ", organization=" + organization +
-                ", rules=" + rules +
-                ", sponsor=" + sponsor +
-                '}';
-    }
 }

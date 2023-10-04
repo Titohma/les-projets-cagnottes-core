@@ -62,7 +62,7 @@ public class CampaignScheduler {
             }
             log.info("[processCampaignFundingDeadlines][" + campaign.getId() + "] Campaign : " + campaign.getId());
             log.info("[processCampaignFundingDeadlines][" + campaign.getId() + "] Donations : " + totalDonations + " € / " + campaign.getDonationsRequired() + " €");
-            if (totalDonations >= campaign.getDonationsRequired()) {
+            if (totalDonations >= campaign.getTotalRequired()) {
                 campaign.setStatus(CampaignStatus.SUCCESSFUL);
                 log.info("[processCampaignFundingDeadlines][" + campaign.getId() + "] Status => SUCCESSFUL");
             } else {
@@ -103,7 +103,7 @@ public class CampaignScheduler {
         for (DonationEntity donation : donations) {
             totalDonations += donation.getAmount();
         }
-        float donationsMissing = campaign.getDonationsRequired() - totalDonations;
+        float donationsMissing = campaign.getTotalDonations() - totalDonations;
         log.info("[notifyCampaignsAlmostFinished][" + campaign.getId() + "] Donations : " + donationsMissing + " €");
 
         Map<String, Object> model = new HashMap<>();

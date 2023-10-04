@@ -29,6 +29,15 @@ public class CampaignModel extends AuditEntity<String> {
     @Column(name = "donations_required")
     protected Float donationsRequired;
 
+    @Column(name = "days_required")
+    protected Integer daysRequired = 0;
+
+    @Column(name = "hours_required")
+    protected Integer hoursRequired = 0;
+
+    @Column(name = "total_required")
+    protected Float totalRequired;
+
     @Column(name = "funding_deadline")
     @Temporal(TemporalType.TIMESTAMP)
     @NotNull
@@ -54,6 +63,9 @@ public class CampaignModel extends AuditEntity<String> {
         model.setTitle(entity.getTitle());
         model.setStatus(entity.getStatus());
         model.setDonationsRequired(entity.getDonationsRequired());
+        model.setHoursRequired(entity.getHoursRequired());
+        model.setDaysRequired(entity.getDaysRequired());
+        model.setTotalRequired(entity.getTotalRequired());
         model.setFundingDeadline(entity.getFundingDeadline());
         model.setTotalDonations(entity.getTotalDonations());
         model.setProject(new GenericModel(entity.getProject()));

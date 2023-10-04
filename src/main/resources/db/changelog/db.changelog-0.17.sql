@@ -96,3 +96,23 @@ ALTER TABLE ONLY news_notifications
     ADD CONSTRAINT fk_news FOREIGN KEY (news_id) REFERENCES news(id);
 --rollback alter table news_notifications drop constraint fk_news;
 --rollback alter table news_notifications drop constraint fk_notification;
+
+--changeset lesprojetscagnottes:add-campaigns-time-required
+ALTER TABLE campaigns
+    ADD days_required integer,
+    ADD hours_required integer,
+    ADD total_required real;
+--rollback alter table projects drop column days_required,drop column hours_required, drop column total_required;
+
+--changeset lesprojetscagnottes:set-campaigns-time-required
+UPDATE campaigns SET days_required = 0, hours_required = 0, total_required = donations_required;
+
+--changeset lesprojetscagnottes:add-budgets-cost-of-time-required
+ALTER TABLE budgets
+    ADD can_finance_time boolean,
+    ADD cost_of_day real,
+    ADD cost_of_hour real;
+--rollback alter table projects drop column can_finance_time, drop column cost_of_day,drop column cost_of_hour;
+
+--changeset lesprojetscagnottes:set-budgets-cost-of-time-required
+UPDATE budgets SET can_finance_time = false, cost_of_day = 0, cost_of_hour = 0;
