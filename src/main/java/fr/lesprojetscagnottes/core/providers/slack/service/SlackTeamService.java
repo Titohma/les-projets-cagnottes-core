@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import fr.lesprojetscagnottes.core.account.service.AccountService;
 import fr.lesprojetscagnottes.core.common.exception.BadRequestException;
 import fr.lesprojetscagnottes.core.common.exception.ForbiddenException;
+import fr.lesprojetscagnottes.core.common.exception.InternalServerException;
 import fr.lesprojetscagnottes.core.common.exception.NotFoundException;
 import fr.lesprojetscagnottes.core.common.service.HttpClientService;
 import fr.lesprojetscagnottes.core.common.strings.StringGenerator;
@@ -180,6 +181,9 @@ public class SlackTeamService {
                 slackTeam.setOrganization(organization);
                 slackTeam.setBotId(slackClientService.getBotId(slackTeam));
                 slackTeamRepository.save(slackTeam);
+            } else {
+                log.error("Impossible to add Slack workspace to organization : {}", json.get("error").toString());
+                throw new InternalServerException();
             }
             return response.body();
 

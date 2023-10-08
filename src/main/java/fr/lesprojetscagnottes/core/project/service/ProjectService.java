@@ -228,7 +228,7 @@ public class ProjectService {
         ProjectEntity projectSaved = this.save(projectToSave);
 
         // Prepare & send notifications for projects
-        if ((previousStatus.equals(ProjectStatus.DRAFT) || previousStatus.equals(ProjectStatus.IDEA))
+        if ((previousStatus.equals(ProjectStatus.NEW) || previousStatus.equals(ProjectStatus.DRAFT) || previousStatus.equals(ProjectStatus.IDEA))
                 && projectToSave.getStatus().equals(ProjectStatus.IN_PROGRESS)) {
             Map<String, Object> model = new HashMap<>();
             model.put("_user_email_", userLoggedIn.getEmail());
@@ -240,7 +240,7 @@ public class ProjectService {
         }
 
         // Prepare & send notifications for ideas
-        if (previousStatus.equals(ProjectStatus.DRAFT)
+        if ((previousStatus.equals(ProjectStatus.NEW) || previousStatus.equals(ProjectStatus.DRAFT))
                 && projectToSave.getStatus().equals(ProjectStatus.IDEA)) {
             Map<String, Object> model = new HashMap<>();
             model.put("_user_email_", userLoggedIn.getEmail());

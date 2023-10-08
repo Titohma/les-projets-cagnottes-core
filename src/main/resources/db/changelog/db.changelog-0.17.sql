@@ -116,3 +116,32 @@ ALTER TABLE budgets
 
 --changeset lesprojetscagnottes:set-budgets-cost-of-time-required
 UPDATE budgets SET can_finance_time = false, cost_of_day = 0, cost_of_hour = 0;
+
+--changeset lesprojetscagnottes:create-sequence-votes
+CREATE SEQUENCE IF NOT EXISTS votes_seq
+    START WITH 1
+    INCREMENT BY 50
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+--rollback drop sequence votes_seq;
+
+--changeset lesprojetscagnottes:create-table-votes
+CREATE TABLE IF NOT EXISTS votes (
+    id bigint primary key,
+    created_at timestamp without time zone DEFAULT now(),
+    created_by character varying(255) DEFAULT 'System'::character varying,
+    updated_at timestamp without time zone DEFAULT now(),
+    updated_by character varying(255) DEFAULT 'System'::character varying,
+    type character varying(50),
+    project_id bigint,
+    user_id bigint
+);
+--rollback drop table votes;
+
+--changeset lesprojetscagnottes:add-fk-votes
+ALTER TABLE ONLY votes
+    ADD CONSTRAINT fk_project FOREIGN KEY (project_id) REFERENCES projects(id),
+    ADD CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id);
+--rollback alter table campaigns drop constraint fk_user;
+--rollback alter table campaigns drop constraint fk_project;
