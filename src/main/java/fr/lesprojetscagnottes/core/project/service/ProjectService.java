@@ -354,5 +354,8 @@ public class ProjectService {
             throw new ForbiddenException();
         }
 
+        // Update status
+        project.setStatus(status);
+        projectRepository.save(project);
     }
 }
