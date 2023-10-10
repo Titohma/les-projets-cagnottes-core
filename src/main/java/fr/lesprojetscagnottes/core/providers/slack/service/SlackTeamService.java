@@ -350,6 +350,10 @@ public class SlackTeamService {
                                 member -> member = userInDb,
                                 () -> organization.getMembers().add(userInDb)
                         );
+
+                // Create accounts onboarding users
+                accountService.createUserAccountsForUsableBudgets(userInDb, organization.getId());
+
             } else {
                 organization.getMembers().stream().filter(member -> member.getId().equals(userInDb.getId()))
                         .findAny()
@@ -357,8 +361,6 @@ public class SlackTeamService {
             }
             organizationService.save(organization);
 
-            // Create accounts onboarding users
-            accountService.createUserAccountsForUsableBudgets(userInDb, organization.getId());
         }
         return null;
     }

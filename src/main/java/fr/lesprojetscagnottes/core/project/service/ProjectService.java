@@ -358,4 +358,8 @@ public class ProjectService {
         project.setStatus(status);
         projectRepository.save(project);
     }
+
+    public ProjectEntity findLessVotedIdea() {
+        return projectRepository.findLessVotedIdea();
+    }
 }

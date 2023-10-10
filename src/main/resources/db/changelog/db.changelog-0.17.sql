@@ -145,3 +145,33 @@ ALTER TABLE ONLY votes
     ADD CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id);
 --rollback alter table campaigns drop constraint fk_user;
 --rollback alter table campaigns drop constraint fk_project;
+
+--changeset lesprojetscagnottes:update-fk-news_notifications-cascade
+ALTER TABLE news_notifications
+    DROP CONSTRAINT fk_notification,
+    ADD CONSTRAINT fk_notification FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE;
+--rollback alter table news_notifications drop constraint fk_notification add constraint fk_notification foreign key (notification_id) references notifications(id);
+
+--changeset lesprojetscagnottes:update-fk-slack_notifications-cascade
+ALTER TABLE slack_notifications
+    DROP CONSTRAINT fk_notification,
+    ADD CONSTRAINT fk_notification FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE;
+--rollback alter table slack_notifications drop constraint fk_notification add constraint fk_notification foreign key (notification_id) references notifications(id);
+
+--changeset lesprojetscagnottes:update-fk-ms_notifications-cascade
+ALTER TABLE ms_notifications
+    DROP CONSTRAINT fk_notification,
+    ADD CONSTRAINT fk_notification FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE;
+--rollback alter table ms_notifications drop constraint fk_notification add constraint fk_notification foreign key (notification_id) references notifications(id);
+
+--changeset lesprojetscagnottes:update-data-delete-accounts-for-disabled-users
+delete from accounts as a
+using
+	budgets as b,
+	users as u
+where
+	b.id = a.budget_id
+	and u.id = a.owner_id
+	and b.end_date > now()
+	and u.enabled = false
+	and a.initial_amount = a.amount;

@@ -6,7 +6,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.util.Date;
 import java.util.Set;
@@ -25,12 +24,9 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
 
     Page<ProjectEntity> findAllByOrganizationIdAndStatusIn(Long id, Set<ProjectStatus> status, Pageable pageable);
 
-    @Query(nativeQuery = true, value = "select c.* from projects c " +
-            "inner join projects_organizations on c.id = projects_organizations.project_id " +
-            "inner join organizations o on projects_organizations.organization_id = o.id " +
-            "inner join organizations_users on organizations_users.organization_id = o.id " +
-            "inner join users u on u.id = organizations_users.user_id " +
-            "where u.id = :user_id and c.id = :project_id")
-    Set<ProjectEntity> findByUserAndId(@Param("user_id") Long userId, @Param("project_id") long projectId);
+    @Query(
+            value = "select p.* from votes v right outer join projects p on p.id = v.project_id where p.status = 'IDEA' group by p.id order by count(v.*) asc limit 1",
+            nativeQuery = true)
+    ProjectEntity findLessVotedIdea();
 
 }

@@ -239,7 +239,7 @@ public class OrganizationController {
         }
 
         // Get budget entities
-        Set<BudgetEntity> entities = budgetRepository.findAllByOrganizationId(organizationId);
+        Set<BudgetEntity> entities = budgetRepository.findAllByOrganizationIdOrderByStartDateDesc(organizationId);
 
         // Convert all entities to models
         Set<BudgetModel> models = new LinkedHashSet<>();

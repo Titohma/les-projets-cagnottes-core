@@ -46,7 +46,6 @@ public class AccountModel extends AuditEntity<String> {
         model.setAmount(entity.getAmount());
         model.setOwner(new GenericModel(entity.getOwner()));
         model.setBudget(new GenericModel(entity.getBudget()));
-        LOGGER.debug("Generated : " + model.toString());
         return model;
     }
 

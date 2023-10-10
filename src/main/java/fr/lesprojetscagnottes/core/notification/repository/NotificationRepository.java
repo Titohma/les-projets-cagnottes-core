@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<NotificationEntity, Long> {
     List<NotificationEntity> findAllByCreatedAtGreaterThan(Date date);
+
+    void deleteByCreatedAtLessThan(Date date);
 }

@@ -147,7 +147,7 @@ public class BudgetController {
         }
 
         // Get and transform donations
-        Page<AccountEntity> entities = accountRepository.findByBudgetId(id, PageRequest.of(offset, limit, Sort.by("id").ascending()));
+        Page<AccountEntity> entities = accountRepository.findAllByBudgetIdOrderByUser(id, PageRequest.of(offset, limit, Sort.by("u.firstname").ascending().and(Sort.by("u.lastname").ascending())));
         DataPage<AccountModel> models = new DataPage<>(entities);
         entities.getContent().forEach(entity -> models.getContent().add(AccountModel.fromEntity(entity)));
         return models;

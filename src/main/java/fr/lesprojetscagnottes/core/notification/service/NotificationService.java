@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +29,7 @@ public class NotificationService {
     private NotificationRepository notificationRepository;
 
     public List<NotificationEntity> list() {
-        LocalDateTime lastWeek = LocalDateTime.now().minusDays(30);
+        LocalDateTime lastWeek = LocalDateTime.now().minusDays(7);
         return notificationRepository.findAllByCreatedAtGreaterThan(DateUtils.asDate(lastWeek));
     }
 
@@ -38,5 +39,9 @@ public class NotificationService {
         entity.setVariables(gson.toJson(variables));
         entity.setOrganization(organizationService.findById(organizationId));
         return notificationRepository.save(entity);
+    }
+
+    public void deleteByCreatedAtLessThan(Date date) {
+        notificationRepository.deleteByCreatedAtLessThan(date);
     }
 }

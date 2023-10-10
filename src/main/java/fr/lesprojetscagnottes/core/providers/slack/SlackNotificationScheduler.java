@@ -29,36 +29,47 @@ public class SlackNotificationScheduler {
     @Value("${fr.lesprojetscagnottes.slack.enabled}")
     private boolean slackEnabled;
 
-    @Autowired
-    private SlackClientService slackClientService;
+    final private SlackClientService slackClientService;
+
+    final private SlackNotificationService slackNotificationService;
+
+    final private SlackTeamService slackTeamService;
+
+    final private SlackUserService slackUserService;
+
+    final private UserService userService;
+
+    final private Gson gson;
+
+    final private NotificationService notificationService;
 
     @Autowired
-    private SlackNotificationService slackNotificationService;
-
-    @Autowired
-    private SlackTeamService slackTeamService;
-
-    @Autowired
-    private SlackUserService slackUserService;
-
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private Gson gson;
-
-    @Autowired
-    private NotificationService notificationService;
+    public SlackNotificationScheduler(
+            SlackClientService slackClientService,
+            SlackNotificationService slackNotificationService,
+            SlackTeamService slackTeamService,
+            SlackUserService slackUserService,
+            UserService userService,
+            Gson gson,
+            NotificationService notificationService) {
+        this.slackClientService = slackClientService;
+        this.slackNotificationService = slackNotificationService;
+        this.slackTeamService = slackTeamService;
+        this.slackUserService = slackUserService;
+        this.userService = userService;
+        this.gson = gson;
+        this.notificationService = notificationService;
+    }
 
     @Scheduled(fixedDelay = 60000)
     @Transactional
     public void processNotifications() {
-        if(slackEnabled) {
+        if (slackEnabled) {
             List<NotificationEntity> notifications = notificationService.list();
             notifications.forEach(notification -> {
                 log.debug("Process notification {}", notification.getId());
                 SlackNotificationEntity slackNotification = slackNotificationService.findByNotificationId(notification.getId());
-                if(slackNotification == null) {
+                if (slackNotification == null) {
                     log.debug("No Slack notification detected");
                     slackNotification = new SlackNotificationEntity();
                     slackNotification.setNotification(notification);
@@ -66,27 +77,27 @@ public class SlackNotificationScheduler {
                     slackNotification.setTeam(slackTeamService.findByOrganizationId(notification.getOrganization().getId()));
                     slackNotification = slackNotificationService.save(slackNotification);
                 }
-                if(slackNotification.getTeam() != null && !slackNotification.getSent()) {
+                if (slackNotification.getTeam() != null && !slackNotification.getSent()) {
                     log.debug("Sending Slack notification {}", slackNotification.getId());
 
                     NotificationVariables notificationVariables = gson.fromJson(notification.getVariables(), NotificationVariables.class);
-                    if(notificationVariables.get("_user_email_") != null && notificationVariables.get("_organization_id_") != null) {
+                    if (notificationVariables.get("_user_email_") != null && notificationVariables.get("_organization_id_") != null) {
                         UserEntity user = userService.findByEmail(notificationVariables.get("_user_email_").toString());
                         log.debug("User : {}", user);
-                        if(user != null) {
+                        if (user != null) {
                             Long organizationId = Double.valueOf(notificationVariables.get("_organization_id_").toString()).longValue();
                             SlackTeamEntity slackTeam = slackTeamService.findByOrganizationId(organizationId);
                             log.debug("SlackTeam matching organization {} : {}", organizationId, slackTeam);
-                            if(slackTeam != null) {
+                            if (slackTeam != null) {
                                 SlackUserEntity slackUser = slackUserService.findByUserIdAndSlackTeamId(user.getId(), slackTeam.getId());
                                 log.debug("SlackUser matching user {} & slackteam {} : {}", user.getId(), slackTeam.getId(), slackUser);
-                                if(slackUser != null) {
+                                if (slackUser != null) {
                                     notificationVariables.put("user_tagname", "<@" + slackUser.getSlackId() + ">");
                                 }
                             }
                         }
                     }
-                    if(notificationVariables.get("user_tagname") == null) {
+                    if (notificationVariables.get("user_tagname") == null) {
                         notificationVariables.put("user_tagname", "*" + notificationVariables.get("user_fullname") + "*");
                     }
                     notification.setVariables(gson.toJson(notificationVariables));

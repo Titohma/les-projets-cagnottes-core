@@ -1,0 +1,38 @@
+{
+  "type": "section",
+  "block_id": "title",
+  "text": {
+    "type": "mrkdwn",
+    "text": "Que pensez-vous de l'idée suivante : *<[(${project_url})]|[(${project_title})]>* ?"
+  }
+},
+{
+  "type": "actions",
+  "elements": [
+    {
+      "type": "button",
+      "text": {
+        "type": "plain_text",
+        "text": ":thumbsup: C'est génial !",
+        "emoji": true
+      },
+      "value": "[(${project_id})]",
+      "action_id": "vote_up"
+    }
+  ]
+},
+{
+  "type": "actions",
+  "elements": [
+    {
+      "type": "button",
+      "text": {
+        "type": "plain_text",
+        "text": ":thumbsdown: Pas convaincu.",
+        "emoji": true
+      },
+      "value": "[(${project_id})]",
+      "action_id": "vote_down"
+    }
+  ]
+}

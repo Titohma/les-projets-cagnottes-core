@@ -14,6 +14,8 @@ import fr.lesprojetscagnottes.core.providers.slack.entity.SlackUserEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -36,14 +38,18 @@ public class SlackClientService {
     @Value("${fr.lesprojetscagnottes.slack.client_secret}")
     private String slackClientSecret;
 
-    @Autowired
-    private Gson gson;
+    private final ResourceLoader resourceLoader;
+    private final SpringTemplateEngine templateEngine;
+    private final Gson gson;
+    private final HttpClientService httpClientService;
 
     @Autowired
-    private HttpClientService httpClientService;
-
-    @Autowired
-    private SpringTemplateEngine templateEngine;
+    public SlackClientService(ResourceLoader resourceLoader, SpringTemplateEngine templateEngine, Gson gson, HttpClientService httpClientService) {
+        this.resourceLoader = resourceLoader;
+        this.templateEngine = templateEngine;
+        this.gson = gson;
+        this.httpClientService = httpClientService;
+    }
 
     public SlackUserEntity token(String code, String redirect_uri) {
         String url = "https://slack.com/api/oauth.v2.access?client_id=" + slackClientId + "&client_secret=" + slackClientSecret + "&code=" + code + "&redirect_uri=" + redirect_uri;
@@ -153,8 +159,30 @@ public class SlackClientService {
             response = httpClientService.getHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
             log.debug("response : " + response.body());
         } catch (IOException | InterruptedException e) {
-            log.error(e.getMessage());
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
+        }
+    }
+
+    public void postMessage(SlackTeamEntity slackTeam, String channelId, String text, String blocks) {
+        String url = "https://slack.com/api/chat.postMessage";
+        String body = "{\"channel\":\"" + channelId +
+                "\", \"text\":\"" + text.replaceAll("(\\r\\n|\\n)", "\\\\n") +
+                "\", \"blocks\":[" + blocks.replaceAll("(\\r\\n|\\n)", "") + "]}";
+        log.debug("POST " + url);
+        log.debug("body : " + body);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofMinutes(1))
+                .header("Content-Type", "application/json; charset=utf-8")
+                .header("Authorization", "Bearer " + slackTeam.getBotAccessToken())
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+        HttpResponse<String> response;
+        try {
+            response = httpClientService.getHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+            log.debug("response : " + response.body());
+        } catch (IOException | InterruptedException e) {
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -175,16 +203,15 @@ public class SlackClientService {
             response = httpClientService.getHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
             log.debug("response : " + response.body());
         } catch (IOException | InterruptedException e) {
-            log.error(e.getMessage());
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
     }
 
     public List<SlackUserEntity> listUsers(SlackTeamEntity slackTeam) {
         String url = "https://slack.com/api/users.list";
         String body = "{}";
-        log.debug("POST " + url);
-        log.debug("body : " + body);
+        log.debug("POST {}", url);
+        log.debug("body : {}", body);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofMinutes(1))
@@ -210,11 +237,11 @@ public class SlackClientService {
                     slackUser.setDeleted(memberJson.get("deleted").getAsBoolean());
 
                     JsonElement isRestricted = memberJson.get("is_restricted");
-                    if(isRestricted != null)
+                    if (isRestricted != null)
                         slackUser.setIsRestricted(isRestricted.getAsBoolean());
 
                     memberJson = memberJson.get("profile").getAsJsonObject();
-                    if(memberJson.get("email") != null) {
+                    if (memberJson.get("email") != null) {
                         slackUser.setEmail(memberJson.get("email").getAsString());
                         slackUser.setName(memberJson.get("real_name").getAsString());
                         slackUser.setImage_192(memberJson.get("image_192").getAsString());
@@ -224,8 +251,7 @@ public class SlackClientService {
                 });
             }
         } catch (IOException | InterruptedException e) {
-            log.error(e.getMessage());
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
         return slackUsers;
     }
@@ -252,8 +278,7 @@ public class SlackClientService {
                 return json.get("channel").getAsJsonObject().get("id").getAsString();
             }
         } catch (IOException | InterruptedException e) {
-            log.error(e.getMessage());
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
         return StringsCommon.EMPTY_STRING;
     }
@@ -286,10 +311,31 @@ public class SlackClientService {
     public void sendNotification(NotificationEntity notification, SlackNotificationEntity slackNotification) {
         Context context = new Context();
         context.setVariables(gson.fromJson(notification.getVariables(), NotificationVariables.class));
-        String message = templateEngine.process("slack/fr/" + notification.getName(), context);
+
+        String templatePath = "slack/fr/" + notification.getName();
+        String blocksPath = "templates/" + templatePath + ".blocks";
+
+        String message = templateEngine.process(templatePath, context);
+
+        String blocks = null;
+        try {
+            Resource resource = resourceLoader.getResource("classpath:" + blocksPath + ".txt");
+            log.debug("Verify existence of {} : {}", resource.getFilename(), resource.exists());
+            if(resource.exists()) {
+                blocks = templateEngine.process(templatePath + ".blocks", context);
+            }
+        } catch (Exception e) {
+            log.debug("File {} does not exist in classpath", blocksPath, e);
+        }
+
+        log.debug("Sending notification Slack {} with blocks {}", message, blocks);
 
         SlackTeamEntity slackTeam = slackNotification.getTeam();
         inviteBotInConversation(slackTeam);
-        postMessage(slackTeam, slackTeam.getPublicationChannelId(), message);
+        if(blocks != null) {
+            postMessage(slackTeam, slackTeam.getPublicationChannelId(), message, blocks);
+        } else {
+            postMessage(slackTeam, slackTeam.getPublicationChannelId(), message);
+        }
     }
 }
