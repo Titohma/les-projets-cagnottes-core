@@ -16,12 +16,8 @@ public class SlackVoteModel {
 
     private String slackUserId = StringsCommon.EMPTY_STRING;
 
-    @Override
-    public String toString() {
-        return "SlackVoteModel{" +
-                "type=" + type +
-                ", projectId=" + projectId +
-                ", slackUserId='" + slackUserId + '\'' +
-                '}';
-    }
+    private String messageTs = StringsCommon.EMPTY_STRING;
+
+    private Long slackNotificationId = 0L;
+
 }

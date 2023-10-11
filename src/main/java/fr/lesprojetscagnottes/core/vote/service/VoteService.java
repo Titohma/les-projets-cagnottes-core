@@ -35,6 +35,14 @@ public class VoteService {
         this.voteRepository = voteRepository;
     }
 
+    public ScoreModel getScoreByProjectId(Long projectId) {
+        ScoreModel scoreModel = new ScoreModel();
+        scoreModel.setProjectId(projectId);
+        scoreModel.setUp(voteRepository.countByTypeAndProjectId(VoteType.UP, projectId));
+        scoreModel.setDown(voteRepository.countByTypeAndProjectId(VoteType.DOWN, projectId));
+        return scoreModel;
+    }
+
     public ScoreModel getScoreByProjectId(Principal principal, Long projectId) {
 
         // Fails if any of references are null
@@ -60,11 +68,7 @@ public class VoteService {
             throw new ForbiddenException();
         }
 
-        ScoreModel scoreModel = new ScoreModel();
-        scoreModel.setProjectId(projectId);
-        scoreModel.setUp(voteRepository.countByTypeAndProjectId(VoteType.UP, projectId));
-        scoreModel.setDown(voteRepository.countByTypeAndProjectId(VoteType.DOWN, projectId));
-        return scoreModel;
+        return this.getScoreByProjectId(projectId);
     }
 
     public Set<ScoreModel> getScoreByProjectIds(Principal principal, Set<Long> projectIds) {

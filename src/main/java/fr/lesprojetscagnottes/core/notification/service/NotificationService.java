@@ -28,6 +28,10 @@ public class NotificationService {
     @Autowired
     private NotificationRepository notificationRepository;
 
+    public NotificationEntity findById(Long id) {
+        return notificationRepository.findById(id).orElse(null);
+    }
+
     public List<NotificationEntity> list() {
         LocalDateTime lastWeek = LocalDateTime.now().minusDays(7);
         return notificationRepository.findAllByCreatedAtGreaterThan(DateUtils.asDate(lastWeek));

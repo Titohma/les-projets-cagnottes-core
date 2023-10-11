@@ -186,6 +186,30 @@ public class SlackClientService {
         }
     }
 
+    public void updateMessage(SlackTeamEntity slackTeam, String channelId, String ts, String text, String blocks) {
+        String url = "https://slack.com/api/chat.update";
+        String body = "{\"channel\":\"" + channelId +
+                "\", \"ts\":\"" + ts +
+                "\", \"text\":\"" + text.replaceAll("(\\r\\n|\\n)", "\\\\n") +
+                "\", \"blocks\":[" + blocks.replaceAll("(\\r\\n|\\n)", "") + "]}";
+        log.debug("POST " + url);
+        log.debug("body : " + body);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofMinutes(1))
+                .header("Content-Type", "application/json; charset=utf-8")
+                .header("Authorization", "Bearer " + slackTeam.getBotAccessToken())
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+        HttpResponse<String> response;
+        try {
+            response = httpClientService.getHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+            log.debug("response : " + response.body());
+        } catch (IOException | InterruptedException e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+
     public void inviteBotInConversation(SlackTeamEntity slackTeam) {
         String url = "https://slack.com/api/conversations.invite";
         String body = "{\"channel\":\"" + slackTeam.getPublicationChannelId() + "\", \"users\": \"" + slackTeam.getBotUserId() + "\"}";
@@ -308,34 +332,62 @@ public class SlackClientService {
         return botId;
     }
 
+    private String generateNotificationContent(NotificationEntity notification, SlackNotificationEntity slackNotification, String templatePath) {
+        Context context = new Context();
+        context.setVariables(gson.fromJson(notification.getVariables(), NotificationVariables.class));
+
+        String message = null;
+        try {
+            Resource resource = resourceLoader.getResource("classpath:templates/" + templatePath + ".txt");
+            log.debug("Verify existence of {} : {}", resource.getFilename(), resource.exists());
+            if(resource.exists()) {
+                message = templateEngine.process(templatePath, context);
+            }
+        } catch (Exception e) {
+            log.debug("File {} does not exist in classpath", templatePath, e);
+        }
+
+        return message;
+    }
+
     public void sendNotification(NotificationEntity notification, SlackNotificationEntity slackNotification) {
         Context context = new Context();
         context.setVariables(gson.fromJson(notification.getVariables(), NotificationVariables.class));
 
         String templatePath = "slack/fr/" + notification.getName();
-        String blocksPath = "templates/" + templatePath + ".blocks";
+        String message = generateNotificationContent(notification, slackNotification, templatePath);
+        String blocks = generateNotificationContent(notification, slackNotification, templatePath + ".blocks");
 
-        String message = templateEngine.process(templatePath, context);
+        if(message != null) {
+            log.debug("Sending notification Slack {} with blocks {}", message, blocks);
 
-        String blocks = null;
-        try {
-            Resource resource = resourceLoader.getResource("classpath:" + blocksPath + ".txt");
-            log.debug("Verify existence of {} : {}", resource.getFilename(), resource.exists());
-            if(resource.exists()) {
-                blocks = templateEngine.process(templatePath + ".blocks", context);
+            SlackTeamEntity slackTeam = slackNotification.getTeam();
+            inviteBotInConversation(slackTeam);
+            if(blocks != null) {
+                postMessage(slackTeam, slackTeam.getPublicationChannelId(), message, blocks);
+            } else {
+                postMessage(slackTeam, slackTeam.getPublicationChannelId(), message);
             }
-        } catch (Exception e) {
-            log.debug("File {} does not exist in classpath", blocksPath, e);
-        }
-
-        log.debug("Sending notification Slack {} with blocks {}", message, blocks);
-
-        SlackTeamEntity slackTeam = slackNotification.getTeam();
-        inviteBotInConversation(slackTeam);
-        if(blocks != null) {
-            postMessage(slackTeam, slackTeam.getPublicationChannelId(), message, blocks);
-        } else {
-            postMessage(slackTeam, slackTeam.getPublicationChannelId(), message);
         }
     }
+    
+    public void updateNotification(NotificationEntity notification, SlackNotificationEntity slackNotification, String ts) {
+        Context context = new Context();
+        context.setVariables(gson.fromJson(notification.getVariables(), NotificationVariables.class));
+
+        String templatePath = "slack/fr/" + notification.getName();
+        String message = generateNotificationContent(notification, slackNotification, templatePath);
+        String blocks = generateNotificationContent(notification, slackNotification, templatePath + ".blocks");
+
+        if(message != null) {
+            log.debug("Update notification Slack {} with blocks {}", message, blocks);
+
+            SlackTeamEntity slackTeam = slackNotification.getTeam();
+            inviteBotInConversation(slackTeam);
+            if(blocks != null) {
+                updateMessage(slackTeam, slackTeam.getPublicationChannelId(), ts, message, blocks);
+            }
+        }
+    }
+
 }

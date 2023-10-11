@@ -100,6 +100,7 @@ public class SlackNotificationScheduler {
                     if (notificationVariables.get("user_tagname") == null) {
                         notificationVariables.put("user_tagname", "*" + notificationVariables.get("user_fullname") + "*");
                     }
+                    notificationVariables.put("slack_notification_id", slackNotification.getId());
                     notification.setVariables(gson.toJson(notificationVariables));
 
                     slackClientService.sendNotification(notification, slackNotification);

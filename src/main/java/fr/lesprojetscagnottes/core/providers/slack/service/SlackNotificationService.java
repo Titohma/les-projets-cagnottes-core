@@ -17,6 +17,10 @@ public class SlackNotificationService {
         return slackNotificationRepository.findByNotificationId(id);
     }
 
+    public SlackNotificationEntity findById(Long id) {
+        return slackNotificationRepository.findById(id).orElse(null);
+    }
+
     public SlackNotificationEntity save(SlackNotificationEntity notification) {
         return slackNotificationRepository.save(notification);
     }

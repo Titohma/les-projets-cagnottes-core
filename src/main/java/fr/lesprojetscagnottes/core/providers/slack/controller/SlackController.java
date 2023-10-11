@@ -8,21 +8,28 @@ import fr.lesprojetscagnottes.core.common.exception.BadRequestException;
 import fr.lesprojetscagnottes.core.common.exception.ForbiddenException;
 import fr.lesprojetscagnottes.core.common.exception.NotFoundException;
 import fr.lesprojetscagnottes.core.common.strings.StringsCommon;
+import fr.lesprojetscagnottes.core.notification.entity.NotificationEntity;
+import fr.lesprojetscagnottes.core.notification.model.NotificationName;
+import fr.lesprojetscagnottes.core.notification.model.NotificationVariables;
+import fr.lesprojetscagnottes.core.notification.service.NotificationService;
 import fr.lesprojetscagnottes.core.organization.entity.OrganizationEntity;
 import fr.lesprojetscagnottes.core.organization.repository.OrganizationRepository;
 import fr.lesprojetscagnottes.core.project.entity.ProjectEntity;
 import fr.lesprojetscagnottes.core.project.service.ProjectService;
+import fr.lesprojetscagnottes.core.providers.slack.entity.SlackNotificationEntity;
 import fr.lesprojetscagnottes.core.providers.slack.entity.SlackTeamEntity;
 import fr.lesprojetscagnottes.core.providers.slack.entity.SlackUserEntity;
 import fr.lesprojetscagnottes.core.providers.slack.model.SlackVoteModel;
 import fr.lesprojetscagnottes.core.providers.slack.repository.SlackTeamRepository;
 import fr.lesprojetscagnottes.core.providers.slack.repository.SlackUserRepository;
 import fr.lesprojetscagnottes.core.providers.slack.service.SlackClientService;
+import fr.lesprojetscagnottes.core.providers.slack.service.SlackNotificationService;
 import fr.lesprojetscagnottes.core.user.UserGenerator;
 import fr.lesprojetscagnottes.core.user.entity.UserEntity;
 import fr.lesprojetscagnottes.core.user.repository.UserRepository;
 import fr.lesprojetscagnottes.core.user.service.UserService;
 import fr.lesprojetscagnottes.core.vote.entity.VoteEntity;
+import fr.lesprojetscagnottes.core.vote.model.ScoreModel;
 import fr.lesprojetscagnottes.core.vote.service.VoteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -37,6 +44,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
+
+import com.google.gson.Gson;
 
 import java.security.Principal;
 import java.util.Date;
@@ -54,38 +63,48 @@ public class SlackController {
     private String webUrl;
 
     private final SpringTemplateEngine templateEngine;
+    private final Gson gson;
     private final BudgetRepository budgetRepository;
     private final OrganizationRepository organizationRepository;
     private final SlackUserRepository slackUserRepository;
     private final SlackTeamRepository slackTeamRepository;
     private final UserRepository userRepository;
     private final AccountService accountService;
+    private final NotificationService notificationService;
     private final ProjectService projectService;
     private final SlackClientService slackClientService;
+    private final SlackNotificationService slackNotificationService;
     private final UserService userService;
     private final VoteService voteService;
 
     @Autowired
     public SlackController(
             SpringTemplateEngine templateEngine,
+            Gson gson,
             BudgetRepository budgetRepository,
             OrganizationRepository organizationRepository,
             SlackUserRepository slackUserRepository,
             SlackTeamRepository slackTeamRepository,
             SlackClientService slackClientService,
+            SlackNotificationService slackNotificationService,
             UserRepository userRepository,
             AccountService accountService,
+            NotificationService notificationService,
             ProjectService projectService,
-            UserService userService, VoteService voteService) {
+            UserService userService, 
+            VoteService voteService) {
         this.templateEngine = templateEngine;
+        this.gson = gson;
         this.budgetRepository = budgetRepository;
         this.organizationRepository = organizationRepository;
         this.slackUserRepository = slackUserRepository;
         this.slackTeamRepository = slackTeamRepository;
-        this.slackClientService = slackClientService;
         this.userRepository = userRepository;
         this.accountService = accountService;
+        this.notificationService = notificationService;
         this.projectService = projectService;
+        this.slackClientService = slackClientService;
+        this.slackNotificationService = slackNotificationService;
         this.userService = userService;
         this.voteService = voteService;
     }
@@ -326,18 +345,36 @@ public class SlackController {
         // Vote
         VoteEntity voteEntity = voteService.getUserVote(user.getId(), project.getId());
 
+        boolean delete = false;
         if(voteEntity != null && voteEntity.getType().equals(vote.getType())) {
-            this.voteService.delete(voteEntity);
-            return;
+            delete = true;
         } else if (voteEntity == null) {
             voteEntity = new VoteEntity();
         }
 
-        // Save project
-        voteEntity.setType(vote.getType());
-        voteEntity.setProject(project);
-        voteEntity.setUser(user);
-        this.voteService.save(voteEntity);
+        // Save vote
+        if(delete) {
+            this.voteService.delete(voteEntity);
+        } else {
+            voteEntity.setType(vote.getType());
+            voteEntity.setProject(project);
+            voteEntity.setUser(user);
+            this.voteService.save(voteEntity);
+        }
+
+        // Update notification
+        SlackNotificationEntity slackNotification = slackNotificationService.findById(vote.getSlackNotificationId());
+        if(slackNotification != null && slackNotification.getNotification() != null) {
+            NotificationEntity notification = notificationService.findById(slackNotification.getNotification().getId());
+            if(notification != null) {
+                ScoreModel score = this.voteService.getScoreByProjectId(project.getId());
+                Map<String, Object> model = gson.fromJson(notification.getVariables(), NotificationVariables.class);
+                model.put("votes_up", score.getUp());
+                model.put("votes_down", score.getDown());
+                notification.setVariables(gson.toJson(model));
+                slackClientService.updateNotification(notification, slackNotification, vote.getMessageTs());
+            }
+        }
     }
 
 }
