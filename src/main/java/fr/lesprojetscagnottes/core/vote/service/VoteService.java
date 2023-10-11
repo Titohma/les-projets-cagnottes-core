@@ -99,6 +99,10 @@ public class VoteService {
         return models;
     }
 
+    public VoteEntity save(VoteEntity vote) {
+        return voteRepository.save(vote);
+    }
+
     public VoteModel vote(Principal principal, VoteModel voteModel) {
 
         // Fails if any of references are null
@@ -132,7 +136,7 @@ public class VoteService {
         VoteEntity voteToSave = voteRepository.findByProjectIdAndUserId(project.getId(), userLoggedInId);
 
         if(voteToSave != null && voteToSave.getType().equals(voteModel.getType())) {
-            this.voteRepository.delete(voteToSave);
+            this.delete(voteToSave);
             return null;
         } else if (voteToSave == null) {
             voteToSave = new VoteEntity();
@@ -142,7 +146,11 @@ public class VoteService {
         voteToSave.setType(voteModel.getType());
         voteToSave.setProject(project);
         voteToSave.setUser(userLoggedIn);
-        return VoteModel.fromEntity(voteRepository.save(voteToSave));
+        return this.save(voteToSave);
+    }
+
+    public VoteEntity getUserVote(Long userId, Long projectId) {
+        return voteRepository.findByProjectIdAndUserId(projectId, userId);
     }
 
     public VoteModel getUserVote(Principal principal, Long projectId) {
@@ -168,11 +176,10 @@ public class VoteService {
             throw new ForbiddenException();
         }
 
-        VoteEntity voteEntity = voteRepository.findByProjectIdAndUserId(projectId, userLoggedInId);
-        if(voteEntity == null) {
-            return null;
-        }
+        return VoteModel.fromEntity(this.getUserVote(userLoggedInId, projectId));
+    }
 
-        return VoteModel.fromEntity(voteEntity);
+    public void delete(VoteEntity voteEntity) {
+        this.voteRepository.delete(voteEntity);
     }
 }
